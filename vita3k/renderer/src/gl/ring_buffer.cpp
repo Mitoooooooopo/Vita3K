@@ -1,4 +1,5 @@
 // Vita3K emulator project
+// some issues in powervr fixed
 // Copyright (C) 2026 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
