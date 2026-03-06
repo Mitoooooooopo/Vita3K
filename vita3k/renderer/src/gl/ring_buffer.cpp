@@ -23,6 +23,18 @@
 #include <util/align.h>
 #include <util/log.h>
 
+#ifdef ANDROID
+#include <EGL/egl.h>
+
+#ifndef GL_MAP_PERSISTENT_BIT_EXT
+#define GL_MAP_PERSISTENT_BIT_EXT  0x0040
+#define GL_MAP_COHERENT_BIT_EXT    0x0080
+#endif
+
+typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC)(GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
+static PFNGLBUFFERSTORAGEEXTPROC s_glBufferStorageEXT = nullptr;
+#endif
+
 namespace renderer::gl {
 
 RingBuffer::RingBuffer(GLenum purpose, const std::size_t capacity)
@@ -43,9 +55,29 @@ RingBuffer::~RingBuffer() {
 void RingBuffer::create_and_map() {
     glBindBuffer(purpose_, buffer_[0]);
 #ifdef ANDROID
-    glBufferData(purpose_, capacity_, nullptr, GL_DYNAMIC_DRAW);
-    base_ = static_cast<std::uint8_t *>(glMapBufferRange(purpose_, 0, capacity_,
-        GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT));
+    // PowerVR GE8320: GL_EXT_buffer_storage exists but only via EXT
+    if (!s_glBufferStorageEXT) {
+        s_glBufferStorageEXT = (PFNGLBUFFERSTORAGEEXTPROC)
+            eglGetProcAddress("glBufferStorageEXT");
+    }
+
+    if (s_glBufferStorageEXT) {
+        s_glBufferStorageEXT(purpose_, capacity_, nullptr,
+            GL_MAP_WRITE_BIT |
+            GL_MAP_PERSISTENT_BIT_EXT |
+            GL_MAP_COHERENT_BIT_EXT);
+        base_ = static_cast<std::uint8_t *>(glMapBufferRange(purpose_, 0, capacity_,
+            GL_MAP_WRITE_BIT |
+            GL_MAP_PERSISTENT_BIT_EXT |
+            GL_MAP_COHERENT_BIT_EXT));
+    } else {
+        // Fallback for devices without GL_EXT_buffer_storage
+        LOG_WARN("glBufferStorageEXT not found, using glBufferData fallback");
+        glBufferData(purpose_, capacity_, nullptr, GL_DYNAMIC_DRAW);
+        base_ = static_cast<std::uint8_t *>(glMapBufferRange(purpose_, 0, capacity_,
+            GL_MAP_WRITE_BIT |
+            GL_MAP_INVALIDATE_BUFFER_BIT));
+    }
 #else
     glBufferStorage(purpose_, capacity_, nullptr,
         GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
@@ -66,6 +98,7 @@ std::pair<std::uint8_t *, std::size_t> RingBuffer::allocate(const std::size_t da
             return std::make_pair(nullptr, static_cast<std::size_t>(-1));
         }
     }
+
 
     std::size_t offset = align(cursor_, 256);
 
