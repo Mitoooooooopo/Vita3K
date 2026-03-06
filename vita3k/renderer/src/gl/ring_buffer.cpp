@@ -31,7 +31,7 @@
 #define GL_MAP_COHERENT_BIT_EXT    0x0080
 #endif
 
-typedef void (GL_APIENTRYP PFNGLBUFFERSTORAGEEXTPROC)(GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
+typedef void (APIENTRYP PFNGLBUFFERSTORAGEEXTPROC)(GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
 static PFNGLBUFFERSTORAGEEXTPROC s_glBufferStorageEXT = nullptr;
 #endif
 
