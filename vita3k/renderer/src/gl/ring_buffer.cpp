@@ -31,8 +31,7 @@
 #define GL_MAP_COHERENT_BIT_EXT    0x0080
 #endif
 
-typedef void (APIENTRYP PFNGLBUFFERSTORAGEEXTPROC)(GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
-static PFNGLBUFFERSTORAGEEXTPROC s_glBufferStorageEXT = nullptr;
+static void (*s_glBufferStorageEXT)(GLenum, GLsizeiptr, const void*, GLbitfield) = nullptr;
 #endif
 
 namespace renderer::gl {
@@ -55,9 +54,9 @@ RingBuffer::~RingBuffer() {
 void RingBuffer::create_and_map() {
     glBindBuffer(purpose_, buffer_[0]);
 #ifdef ANDROID
-    // PowerVR GE8320: GL_EXT_buffer_storage exists but only via EXT
+    // PowerVR GE8320: GL_EXT_buffer_storage exists but only via EXT entry point
     if (!s_glBufferStorageEXT) {
-        s_glBufferStorageEXT = (PFNGLBUFFERSTORAGEEXTPROC)
+        s_glBufferStorageEXT = (void(*)(GLenum, GLsizeiptr, const void*, GLbitfield))
             eglGetProcAddress("glBufferStorageEXT");
     }
 
@@ -71,7 +70,6 @@ void RingBuffer::create_and_map() {
             GL_MAP_PERSISTENT_BIT_EXT |
             GL_MAP_COHERENT_BIT_EXT));
     } else {
-        // Fallback for devices without GL_EXT_buffer_storage
         LOG_WARN("glBufferStorageEXT not found, using glBufferData fallback");
         glBufferData(purpose_, capacity_, nullptr, GL_DYNAMIC_DRAW);
         base_ = static_cast<std::uint8_t *>(glMapBufferRange(purpose_, 0, capacity_,
@@ -82,8 +80,7 @@ void RingBuffer::create_and_map() {
     glBufferStorage(purpose_, capacity_, nullptr,
         GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
     base_ = static_cast<std::uint8_t *>(glMapBufferRange(purpose_, 0, capacity_,
-        GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT |
-        GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT));
+        GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT));
 #endif
 
     if (!base_) {
