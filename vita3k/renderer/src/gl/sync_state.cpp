@@ -377,29 +377,39 @@ void sync_texture(GLState &state, GLContext &context, MemState &mem, std::size_t
             if (swizzle) {
                 if (swizzle_surface) {
                     if (std::memcmp(swizzle_surface, swizzle, 16) != 0) {
-                        // Surface is stored in RGBA in GPU memory, unless in other circumstances. So we must reverse order
-                        for (int i = 0; i < 4; i++) {
-                            if ((swizzle[i] < GL_RED) || (swizzle[i] > GL_ALPHA)) {
-                                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, swizzle[i]);
-                            } else {
-                                for (int j = 0; j < 4; j++) {
-                                    if (swizzle[i] == swizzle_surface[j]) {
-                                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, GL_RED + j);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        const GLint default_rgba[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
 #ifdef __ANDROID__
-                        for (int i = 0; i < 4; i++) {
-                            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, default_rgba[i]);
-                        }
+    // PowerVR GE8320: known driver bug where surface swizzle
+    // remapping produces wrong channel order (BGRA/RGBA swap).
+    // Apply texture swizzle directly, bypassing surface remapping.
+    for (int i = 0; i < 4; i++) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, swizzle[i]);
+    }
 #else
-                        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, default_rgba);
+    // Surface is stored in RGBA in GPU memory, unless in other circumstances.
+    // So we must reverse order
+    for (int i = 0; i < 4; i++) {
+        if ((swizzle[i] < GL_RED) || (swizzle[i] > GL_ALPHA)) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, swizzle[i]);
+        } else {
+            for (int j = 0; j < 4; j++) {
+                if (swizzle[i] == swizzle_surface[j]) {
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, GL_RED + j);
+                    break;
+                }
+            }
+        }
+    }
 #endif
-                    }
+} else {
+    const GLint default_rgba[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+#ifdef __ANDROID__
+    for (int i = 0; i < 4; i++) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R + i, default_rgba[i]);
+    }
+#else
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, default_rgba);
+#endif
+}
                 } else {
                     static bool has_happened = false;
                     LOG_TRACE_IF(!has_happened, "No surface swizzle found, use default texture swizzle");
