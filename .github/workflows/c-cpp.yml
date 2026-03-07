@@ -1,7 +1,7 @@
 name: C/C++ CI
 
 on:
-  push:  # only runs manually from Actions tab
+  workflow_dispatch:  # only runs manually from Actions tab
 
 env:
   BUILD_CONFIG: Release
