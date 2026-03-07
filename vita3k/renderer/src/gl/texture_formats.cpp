@@ -49,7 +49,7 @@ static const GLint swizzle_rgb[4] = { GL_BLUE, GL_GREEN, GL_RED, GL_ONE };
 static const GLint swizzle_bgr[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ONE };
 
 // SceGxmTextureSwizzle4Mode
-static const GLint swizzle_abgr[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+static const GLint swizzle_abgr[4] = { GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA };
 static const GLint swizzle_argb[4] = { GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA };
 static const GLint swizzle_rgba[4] = { GL_ALPHA, GL_BLUE, GL_GREEN, GL_RED };
 static const GLint swizzle_bgra[4] = { GL_GREEN, GL_BLUE, GL_ALPHA, GL_RED };
