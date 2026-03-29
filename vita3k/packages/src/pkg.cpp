@@ -64,16 +64,21 @@ bool decrypt_install_nonpdrm(EmuEnvState &emuenv, const fs::path &drmlicpath, co
     F00DEncryptorTypes f00d_enc_type = F00DEncryptorTypes::native;
     std::string f00d_arg = std::string();
 
-    if ((execute(zRIF, title_id_src, title_id_dst, f00d_enc_type, f00d_arg) < 0) && (title_path.string().find("theme") == std::string::npos))
-        return false;
+int res = execute(zRIF, title_id_src, title_id_dst, f00d_enc_type, f00d_arg);
 
-    if (emuenv.app_info.app_category.find("gp") == std::string::npos)
-        copy_license(emuenv, drmlicpath);
+if (res < 0) {
+    LOG_WARNING("Partial decrypt: continuing installation (some files failed).");
+}
 
-    fs::remove_all(title_id_src);
-    fs::rename(title_id_dst, title_id_src);
+// Always replace original with whatever was decrypted
+fs::remove_all(title_id_src);
+fs::rename(title_id_dst, title_id_src);
 
-    return true;
+if (emuenv.app_info.app_category.find("gp") == std::string::npos)
+    copy_license(emuenv, drmlicpath);
+
+return true;
+
 }
 
 bool install_pkg(const fs::path &pkg_path, EmuEnvState &emuenv, std::string &p_zRIF, const std::function<void(float)> &progress_callback) {
