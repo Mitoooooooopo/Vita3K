@@ -67,7 +67,7 @@ bool decrypt_install_nonpdrm(EmuEnvState &emuenv, const fs::path &drmlicpath, co
 int res = execute(zRIF, title_id_src, title_id_dst, f00d_enc_type, f00d_arg);
 
 if (res < 0) {
-    LOG_WARNING("Partial decrypt: continuing installation (some files failed).");
+    LOG_INFO("Partial decrypt: continuing installation (some files failed).");
 }
 
 // Always replace original with whatever was decrypted
