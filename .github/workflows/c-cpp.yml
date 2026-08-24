@@ -47,7 +47,9 @@ jobs:
             cmake_preset: ci-windows-msvc
             vcpkg_root: C:\vcpkg
             vcpkg_triplet: x64-windows-static-md
-            cache_path: C:\vcpkg-binary-cache
+            cache_path: |
+              C:\vcpkg\installed
+              C:\vcpkg\packages
             qt_install_deps: 'false'
 
           - os: windows-11-arm
@@ -73,13 +75,13 @@ jobs:
             qt_install_deps: 'false'
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Restore cache
-        uses: actions/cache@v6
+        uses: actions/cache@v5
         if: ${{ matrix.cache_path != '' }}
         with:
           path: ${{ matrix.cache_path }}
@@ -99,10 +101,7 @@ jobs:
         shell: pwsh
         env:
           VCPKG_ROOT: ${{ matrix.vcpkg_root }}
-          VCPKG_BINARY_CACHE: ${{ matrix.cache_path }}
-        run: |
-          New-Item -ItemType Directory -Force -Path $env:VCPKG_BINARY_CACHE | Out-Null
-          .\.ci\setup-windows-msvc.ps1 -VcpkgTriplet '${{ matrix.vcpkg_triplet }}'
+        run: .\.ci\setup-windows-msvc.ps1 -VcpkgTriplet '${{ matrix.vcpkg_triplet }}'
         if: matrix.platform == 'windows-x64'
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
@@ -175,7 +174,6 @@ jobs:
         shell: bash
         env:
           VCPKG_ROOT: ${{ matrix.vcpkg_root }}
-          VCPKG_BINARY_CACHE: ${{ matrix.cache_path }}
         run: bash ./.ci/build-desktop.sh --preset ${{ matrix.cmake_preset }} --config ${{ env.BUILD_CONFIG }}
         if: matrix.platform == 'windows-x64'
 
@@ -222,22 +220,22 @@ jobs:
   android-build:
     name: Android
     runs-on: ubuntu-latest
-    env:
-      VCPKG_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Restore vcpkg binary cache
-        uses: actions/cache@v6
+      - name: Restore native dependency cache
+        uses: actions/cache@v5
         with:
-          path: ${{ env.VCPKG_BINARY_CACHE }}
-          key: vcpkg-bincache-android-${{ hashFiles('vcpkg.json', 'CMakeLists.txt', 'cmake/**', '.ci/**', 'android/app/build.gradle') }}
+          path: |
+            /usr/local/share/vcpkg/installed
+            /usr/local/share/vcpkg/packages
+          key: cache-android-native-${{ hashFiles('CMakeLists.txt', 'cmake/**', '.ci/**', 'android/app/build.gradle', 'vcpkg.json') }}
           restore-keys: |
-            vcpkg-bincache-android-
+            cache-android-native-
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -258,12 +256,19 @@ jobs:
       - name: Set up Android build environment
         env:
           VCPKG_ROOT: /usr/local/share/vcpkg
-        run: |
-          mkdir -p "$VCPKG_BINARY_CACHE"
-          bash ./.ci/setup-android.sh
+        run: bash ./.ci/setup-android.sh
 
       - uses: hendrikmuhs/ccache-action@v1.2.23
-
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -v -keystore /home/runner/keystore.jks \
+          -alias vita3k \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass vita3kpass \
+          -keypass vita3kpass \
+          -dname "CN=Vita3K, OU=Vita3K, O=Vita3K, L=Unknown, S=Unknown, C=US"
       - name: Decode Android keystore
         env:
           KEYSTORE_ENCODED: ${{ secrets.KEYSTORE }}
@@ -308,7 +313,7 @@ jobs:
       github.ref == 'refs/heads/master' &&
       github.repository == 'Vita3K/Vita3K'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

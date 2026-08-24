@@ -52,7 +52,7 @@ target_link_libraries(renderer PUBLIC display mem stb shader glutil threads conf
 target_link_libraries(renderer PRIVATE dialog ddspp SDL3::SDL3 stb ffmpeg xxHash::xxhash concurrentqueue)
 
 if(ANDROID)
-	target_link_libraries(renderer PRIVATE android adrenotools)
+	target_link_libraries(renderer PRIVATE android adrenotools EGL)
 endif()
 
 if(APPLE)
